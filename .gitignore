@@ -1,0 +1,8 @@
+memory.json
+you.txt
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+python

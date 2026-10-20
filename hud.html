@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>J.A.R.V.I.S.</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --c: 0,210,255; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden;
+    background: radial-gradient(ellipse at 50% 47%, #04202c 0%, #020d15 50%, #010509 100%);
+    color:rgb(var(--c)); font-family:'Rajdhani','Consolas',monospace; cursor:none; }
+  body::before { content:''; position:fixed; inset:0; z-index:0;
+    background-image:
+      linear-gradient(rgba(0,210,255,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,210,255,.045) 1px, transparent 1px);
+    background-size: 60px 60px; }
+  canvas { position:fixed; top:0; left:0; z-index:1; }
+  .glow { text-shadow: 0 0 8px rgba(var(--c),.9), 0 0 22px rgba(var(--c),.45); }
+  .ui { position:fixed; z-index:3; opacity:0; animation: fade 1.5s ease 1.6s forwards; }
+  @keyframes fade { to { opacity:1; } }
+
+  #scan { position:fixed; inset:0; z-index:5; pointer-events:none;
+    background:
+      radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,.8) 100%),
+      repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,.2) 3px); }
+
+  .corner { position:fixed; z-index:4; width:70px; height:70px;
+    border:0 solid rgba(var(--c),.85); }
+  .tl { top:22px; left:22px; border-top-width:3px; border-left-width:3px; }
+  .tr { top:22px; right:22px; border-top-width:3px; border-right-width:3px; }
+  .bl { bottom:22px; left:22px; border-bottom-width:3px; border-left-width:3px; }
+  .br { bottom:22px; right:22px; border-bottom-width:3px; border-right-width:3px; }
+
+  #title { top:30px; width:100%; text-align:center; font-family:'Orbitron',sans-serif;
+    font-weight:900; font-size:30px; letter-spacing:14px; }
+  #sub { top:78px; width:100%; text-align:center; font-size:13px; letter-spacing:7px; opacity:.5; }
+
+  #left { left:48px; top:140px; width:270px; font-size:15px; letter-spacing:2px; }
+  #right { right:48px; top:40px; width:380px; text-align:right; font-size:14px; letter-spacing:1px; }
+  h3 { font-family:'Orbitron',sans-serif; font-size:12px; letter-spacing:4px; font-weight:700;
+    margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid rgba(var(--c),.35); }
+  .row { display:flex; justify-content:space-between; }
+  .bar { height:7px; background:rgba(var(--c),.1); border:1px solid rgba(var(--c),.35); margin:4px 0 16px; }
+  .bar i { display:block; height:100%; width:0%; background:rgba(var(--c),.95);
+    box-shadow:0 0 10px rgba(var(--c),.9); transition:width .4s; }
+  .stat { margin:9px 0; display:flex; justify-content:space-between; opacity:.85; }
+  .ok { color:#7dffb5; }
+  #clock { font-family:'Orbitron',sans-serif; font-size:36px; font-weight:700; }
+  #date { font-size:14px; letter-spacing:4px; opacity:.6; margin-bottom:26px; }
+  #log { text-align:left; font-size:13px; line-height:1.55; opacity:.85; min-height:150px; }
+  #log div { border-left:2px solid rgba(var(--c),.5); padding-left:8px; margin-bottom:4px; }
+
+  #status { bottom:160px; width:100%; text-align:center; font-family:'Orbitron',sans-serif;
+    font-size:15px; letter-spacing:6px; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:14px;
+    background:rgb(var(--c)); animation: blink 1.2s infinite; }
+  @keyframes blink { 50% { opacity:.25; } }
+  #subs { bottom:55px; width:100%; text-align:center; padding:0 18%; }
+  #subsUser { font-size:17px; opacity:.55; letter-spacing:1px; margin-bottom:8px; min-height:22px; }
+  #subsJarvis { font-size:23px; font-weight:600; letter-spacing:1px; min-height:30px; }
+
+  #offline { display:none; position:fixed; inset:0; z-index:9; background:rgba(1,5,9,.92);
+    align-items:center; justify-content:center; font-family:'Orbitron',sans-serif;
+    font-size:26px; letter-spacing:8px; color:#ff5a5a; text-shadow:0 0 14px #ff5a5a; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="scan"></div>
+<div class="corner tl"></div><div class="corner tr"></div>
+<div class="corner bl"></div><div class="corner br"></div>
+
+<div id="title" class="ui glow">J.A.R.V.I.S.</div>
+<div id="sub" class="ui">JUST A RATHER VERY INTELLIGENT SYSTEM</div>
+
+<div id="left" class="ui">
+  <h3>SYSTEM DIAGNOSTICS</h3>
+  <div class="row"><span>CPU LOAD</span><span id="cpuVal">--</span></div>
+  <div class="bar"><i id="cpuBar"></i></div>
+  <div class="row"><span>MEMORY</span><span id="ramVal">--</span></div>
+  <div class="bar"><i id="ramBar"></i></div>
+  <div class="stat"><span>NEURAL CORE</span><span class="ok">ONLINE</span></div>
+  <div class="stat"><span>VOICE INTERFACE</span><span class="ok">ACTIVE</span></div>
+  <div class="stat"><span>MEMORY BANK</span><span class="ok">LOADED</span></div>
+  <div class="stat"><span>PERMISSIONS</span><span class="ok">ENFORCED</span></div>
+</div>
+
+<div id="right" class="ui">
+  <div id="clock" class="glow">--:--:--</div>
+  <div id="date"></div>
+  <h3 style="text-align:left">ACTIVITY LOG</h3>
+  <div id="log"></div>
+</div>
+
+<div id="status" class="ui glow"><span class="dot"></span><span id="statusText">STANDBY</span></div>
+<div id="subs" class="ui"><div id="subsUser"></div><div id="subsJarvis" class="glow"></div></div>
+<div id="offline">JARVIS OFFLINE</div>
+
+<script>
+// ===== SETTINGS =====
+const LITE = false;          // set to true if the HUD still lags
+const FPS = LITE ? 20 : 30;
+
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+let W = 0, H = 0;
+function resize() {
+  const d = Math.min(window.devicePixelRatio || 1, 1.25);
+  W = innerWidth; H = innerHeight;
+  cv.width = W * d; cv.height = H * d;
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  ctx.setTransform(d, 0, 0, d, 0, 0);
+}
+addEventListener('resize', resize);
+resize();
+
+// ===== talking to Python =====
+const $ = id => document.getElementById(id);
+let S = { mode: 'idle', user: '', jarvis: '', cpu: null, ram: null, quit: false };
+let lastUser = '', lastJarvis = '';
+const logLines = [];
+const cache = {};
+const STATUS = { idle: 'STANDBY  //  SAY "JARVIS"', listening: 'LISTENING',
+                 thinking: 'PROCESSING', speaking: 'SPEAKING' };
+
+function setText(id, v) { if (cache[id] !== v) { cache[id] = v; $(id).textContent = v; } }
+function setWidth(id, v) { const k = id + 'w'; if (cache[k] !== v) { cache[k] = v; $(id).style.width = v; } }
+
+function addLog(text) {
+  const t = new Date().toLocaleTimeString('en-GB');
+  logLines.push(t + '  ' + text);
+  if (logLines.length > 7) logLines.shift();
+  $('log').innerHTML = logLines
+    .map(l => '<div>' + l.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</div>').join('');
+}
+
+function updatePanels() {
+  if (S.cpu !== null && S.cpu !== undefined) {
+    setWidth('cpuBar', S.cpu + '%'); setText('cpuVal', Math.round(S.cpu) + '%');
+    setWidth('ramBar', S.ram + '%'); setText('ramVal', Math.round(S.ram) + '%');
+  } else {
+    setText('cpuVal', 'N/A'); setText('ramVal', 'N/A');
+  }
+  setText('statusText', STATUS[S.mode] || 'STANDBY');
+  setText('subsUser', S.user ? 'YOU:  ' + S.user : '');
+  setText('subsJarvis', S.jarvis || '');
+}
+
+async function poll() {
+  try {
+    const r = await fetch('/state', { cache: 'no-store' });
+    S = await r.json();
+    $('offline').style.display = 'none';
+    if (S.user && S.user !== lastUser) { lastUser = S.user; addLog('YOU: ' + S.user); }
+    if (S.jarvis && S.jarvis !== lastJarvis) { lastJarvis = S.jarvis; addLog('JARVIS: ' + S.jarvis); }
+    updatePanels();
+    if (S.quit) window.close();
+  } catch (e) {
+    $('offline').style.display = 'flex';
+  }
+  setTimeout(poll, 250);
+}
+poll();
+
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') { fetch('/quit').finally(() => window.close()); }
+});
+
+function updateClock() {
+  const d = new Date();
+  setText('clock', d.toLocaleTimeString('en-GB'));
+  setText('date', d.toLocaleDateString('en-GB',
+    { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase());
+}
+updateClock(); setInterval(updateClock, 500);
+
+// ===== drawing helpers (glow is faked with extra wide, faint strokes) =====
+const CY = 'rgba(0,210,255,';
+
+function strokeGlow(a, w) {
+  if (!LITE) {
+    ctx.lineWidth = w * 5;   ctx.strokeStyle = CY + (a * 0.07) + ')'; ctx.stroke();
+    ctx.lineWidth = w * 2.4; ctx.strokeStyle = CY + (a * 0.16) + ')'; ctx.stroke();
+  }
+  ctx.lineWidth = w; ctx.strokeStyle = CY + a + ')'; ctx.stroke();
+}
+function ring(r, w, a) {
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+  strokeGlow(a, w);
+}
+function segs(r, n, frac, rot, w, a) {
+  const step = Math.PI * 2 / n;
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const s = rot + i * step;
+    ctx.moveTo(Math.cos(s) * r, Math.sin(s) * r);
+    ctx.arc(0, 0, r, s, s + step * frac);
+  }
+  strokeGlow(a, w);
+}
+function ticks(r1, r2, n, rot, a) {
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const t = rot + i * Math.PI * 2 / n;
+    const rr = (i % 5 === 0) ? r1 - (r2 - r1) * 0.6 : r1;
+    ctx.moveTo(Math.cos(t) * rr, Math.sin(t) * rr);
+    ctx.lineTo(Math.cos(t) * r2, Math.sin(t) * r2);
+  }
+  strokeGlow(a, 1.5);
+}
+const ease = x => 1 - Math.pow(1 - x, 3);
+
+// ===== animation =====
+let level = 0.35, ang = 0, sweep = 0, waveAmp = 0.01;
+let lastDraw = performance.now();
+const t0 = lastDraw;
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (now - lastDraw < 1000 / FPS - 2) return;
+  const dt = Math.min(0.1, (now - lastDraw) / 1000);
+  lastDraw = now;
+  const t = (now - t0) / 1000;
+  const boot = ease(Math.min(1, t / 2.8));
+  const mode = S.mode;
+
+  let target;
+  if (mode === 'speaking') target = 0.7 + 0.3 * Math.random();
+  else if (mode === 'listening') target = 0.8 + 0.2 * Math.sin(t * 6);
+  else if (mode === 'thinking') target = 0.65 + 0.25 * Math.sin(t * 12);
+  else target = 0.4 + 0.12 * Math.sin(t * 1.5);
+  level += (target - level) * Math.min(1, dt * 10);
+  const L = level * boot;
+
+  const speed = { idle: 0.25, listening: 0.5, thinking: 1.6, speaking: 0.7 }[mode] || 0.25;
+  ang += speed * dt;
+  sweep += (mode === 'thinking' ? 3.5 : 1.1) * dt;
+
+  const ampTarget = { idle: 0.012, listening: 0.05, thinking: 0.03, speaking: 0.11 }[mode] || 0.012;
+  waveAmp += (ampTarget - waveAmp) * Math.min(1, dt * 8);
+  const jit = mode === 'speaking' ? (0.6 + 0.4 * Math.random()) : 1;
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.clearRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H * 0.47;
+  const R = Math.min(W * 0.28, H * 0.24) * (0.6 + 0.4 * boot);
+  ctx.save();
+  ctx.translate(cx, cy);
+  if (!LITE) ctx.globalCompositeOperation = 'lighter';
+
+  // soft glow
+  let g = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.1);
+  g.addColorStop(0, CY + (0.5 * L) + ')');
+  g.addColorStop(0.5, 'rgba(0,150,220,' + (0.16 * L) + ')');
+  g.addColorStop(1, 'rgba(0,100,200,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(0, 0, R * 1.1, 0, Math.PI * 2); ctx.fill();
+
+  // radar sweep
+  if (!LITE) {
+    const sg = ctx.createConicGradient(sweep, 0, 0);
+    sg.addColorStop(0, CY + '0)');
+    sg.addColorStop(0.85, CY + '0)');
+    sg.addColorStop(1, CY + (0.28 * boot) + ')');
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(0, 0, R * 0.95, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // side gauges
+  ctx.beginPath();
+  ctx.arc(0, 0, R * 1.42, -0.55, 0.55);
+  ctx.moveTo(Math.cos(Math.PI - 0.55) * R * 1.42, Math.sin(Math.PI - 0.55) * R * 1.42);
+  ctx.arc(0, 0, R * 1.42, Math.PI - 0.55, Math.PI + 0.55);
+  strokeGlow(0.5 * boot, 3);
+  ctx.beginPath();
+  for (let i = -10; i <= 10; i++) {
+    for (const base of [0, Math.PI]) {
+      const a = base + i * 0.055;
+      ctx.moveTo(Math.cos(a) * R * 1.46, Math.sin(a) * R * 1.46);
+      ctx.lineTo(Math.cos(a) * R * 1.5, Math.sin(a) * R * 1.5);
+    }
+  }
+  strokeGlow(0.35 * boot, 1.5);
+
+  // rings
+  ring(R * 1.28, 1.5, 0.35 * boot);
+  ticks(R * 1.16, R * 1.24, 120, ang * 0.15, 0.55 * boot);
+  segs(R * 1.06, 3, 0.28, ang, 5, 0.9 * boot);
+  segs(R * 0.98, 72, 0.5, -ang * 0.5, 2, 0.45 * boot);
+  segs(R * 0.86, 8, 0.7, -ang * 1.4, 7, (0.55 + 0.45 * L) * boot);
+  ring(R * 0.76, 1.5, 0.5 * boot);
+
+  // audio wave ring
+  ctx.beginPath();
+  const N = 120;
+  for (let i = 0; i <= N; i++) {
+    const a = i / N * Math.PI * 2;
+    const n = Math.sin(a * 7 + t * 6) * 0.5 + Math.sin(a * 13 - t * 9) * 0.3 + Math.sin(a * 29 + t * 15) * 0.2;
+    const rr = R * (0.66 + waveAmp * n * jit);
+    const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  strokeGlow(0.95 * boot, 2.5);
+  ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(200,245,255,' + (0.9 * boot) + ')'; ctx.stroke();
+
+  // hexagon
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = ang * 0.8 + i * Math.PI / 3;
+    const x = Math.cos(a) * R * 0.52, y = Math.sin(a) * R * 0.52;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  strokeGlow(0.85 * boot, 3);
+
+  // spokes
+  ctx.beginPath();
+  for (let i = 0; i < 12; i++) {
+    const a = -ang * 1.6 + i * Math.PI / 6;
+    ctx.moveTo(Math.cos(a) * R * 0.31, Math.sin(a) * R * 0.31);
+    ctx.lineTo(Math.cos(a) * R * 0.40, Math.sin(a) * R * 0.40);
+  }
+  strokeGlow(0.6 * boot, 2);
+  segs(R * 0.44, 3, 0.25, ang * 2, 4, 0.9 * boot);
+  ring(R * 0.30, 2, 0.75 * boot);
+
+  // core
+  const cr = R * 0.24 * (0.85 + 0.3 * L);
+  g = ctx.createRadialGradient(0, 0, 0, 0, 0, cr);
+  g.addColorStop(0, 'rgba(235,252,255,' + boot + ')');
+  g.addColorStop(0.35, 'rgba(120,235,255,' + (0.9 * boot) + ')');
+  g.addColorStop(1, 'rgba(0,150,255,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(0, 0, cr, 0, Math.PI * 2); ctx.fill();
+
+  ctx.restore();
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
